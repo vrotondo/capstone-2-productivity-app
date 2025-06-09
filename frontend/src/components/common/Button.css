@@ -1,0 +1,114 @@
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 500;
+    border: none;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    font-family: inherit;
+    gap: 0.5rem;
+}
+
+/* Button sizes */
+.btn--small {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn--medium {
+    padding: 0.5rem 1rem;
+    font-size: 1rem;
+}
+
+.btn--large {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+    width: 100%;
+}
+
+/* Button variants */
+.btn--primary {
+    background-color: #3b82f6;
+    color: white;
+}
+
+.btn--primary:hover:not(.btn--disabled) {
+    background-color: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(59, 130, 246, 0.3);
+}
+
+.btn--secondary {
+    background-color: #6b7280;
+    color: white;
+}
+
+.btn--secondary:hover:not(.btn--disabled) {
+    background-color: #4b5563;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(107, 114, 128, 0.3);
+}
+
+.btn--danger {
+    background-color: #ef4444;
+    color: white;
+}
+
+.btn--danger:hover:not(.btn--disabled) {
+    background-color: #dc2626;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+}
+
+.btn--ghost {
+    background-color: transparent;
+    color: #6b7280;
+    border: 1px solid #d1d5db;
+}
+
+.btn--ghost:hover:not(.btn--disabled) {
+    background-color: #f9fafb;
+    color: #374151;
+    border-color: #9ca3af;
+}
+
+/* Disabled state */
+.btn--disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+/* Loading spinner */
+.btn__spinner {
+    font-size: 0.875em;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Focus styles */
+.btn:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .btn--large {
+        padding: 0.875rem 1.5rem;
+        font-size: 1.125rem;
+    }
+}

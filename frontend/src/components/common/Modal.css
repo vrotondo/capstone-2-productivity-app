@@ -1,0 +1,116 @@
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+    z-index: 1000;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+    }
+
+    to {
+        opacity: 1;
+    }
+}
+
+.modal {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    width: 100%;
+    max-width: 32rem;
+    max-height: 90vh;
+    overflow: hidden;
+    animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px) scale(0.95);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+.modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+}
+
+.modal__title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: #1f2937;
+    margin: 0;
+}
+
+.modal__close {
+    width: 2rem;
+    height: 2rem;
+    padding: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #6b7280;
+    transition: all 0.2s ease;
+}
+
+.modal__close:hover {
+    background-color: #f3f4f6;
+    color: #374151;
+}
+
+.modal__content {
+    padding: 0 1.5rem 1.5rem 1.5rem;
+    max-height: calc(90vh - 8rem);
+    overflow-y: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 640px) {
+    .modal-backdrop {
+        padding: 0.5rem;
+    }
+
+    .modal {
+        max-width: none;
+        margin: 0;
+    }
+
+    .modal__header {
+        padding: 1rem 1rem 0 1rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+    }
+
+    .modal__title {
+        font-size: 1.125rem;
+    }
+
+    .modal__content {
+        padding: 0 1rem 1rem 1rem;
+    }
+}
