@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import hashlib
 
+# Create db instance here - no circular import
 db = SQLAlchemy()
 
 class User(db.Model):
@@ -14,9 +15,9 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
-    expenses = db.relationship('Expense', backref='user', lazy=True)
-    categories = db.relationship('Category', backref='user', lazy=True)
-    budgets = db.relationship('Budget', backref='user', lazy=True)
+    expenses = db.relationship('Expense', backref='user', lazy=True, cascade='all, delete-orphan')
+    categories = db.relationship('Category', backref='user', lazy=True, cascade='all, delete-orphan')
+    budgets = db.relationship('Budget', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def __init__(self, email, password, first_name, last_name):
         self.email = email

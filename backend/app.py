@@ -1,9 +1,11 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
-from models import db, User, Category, Expense, Budget
 from datetime import datetime, date
 import requests
+
+# Import db and models from models.py (no circular import now)
+from models import db, User, Category, Expense, Budget
 
 app = Flask(__name__)
 
@@ -13,7 +15,7 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///finance_tracker.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
 
-# Initialize extensions
+# Initialize extensions with app
 db.init_app(app)
 jwt = JWTManager(app)
 CORS(app)
@@ -23,7 +25,9 @@ EXCHANGE_API_KEY = 'wCoOoTtNOghmt2oqx792'
 
 # Create tables
 with app.app_context():
+    print("Creating database tables...")
     db.create_all()
+    print("Database tables created successfully!")
 
 # ============== AUTHENTICATION ROUTES ==============
 
