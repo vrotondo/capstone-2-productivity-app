@@ -373,7 +373,7 @@ def get_dashboard_data():
         print(f"Dashboard error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# ============== HEALTH CHECK ==============
+# ============== HEALTH CHECK & DEBUG ==============
 
 @app.route('/api/health', methods=['GET'])
 def health_check():
@@ -382,6 +382,24 @@ def health_check():
         'message': 'Finance Tracker API is running',
         'timestamp': datetime.now().isoformat()
     }), 200
+
+@app.route('/api/debug/user', methods=['GET'])
+@jwt_required()
+def debug_user():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        categories = Category.query.filter_by(user_id=user_id).all()
+        
+        return jsonify({
+            'user_id': user_id,
+            'user_exists': user is not None,
+            'user_email': user.email if user else None,
+            'categories_count': len(categories),
+            'categories': [cat.name for cat in categories]
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("🚀 Starting Finance Tracker API...")
