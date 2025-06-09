@@ -3,7 +3,6 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
 import './AuthForms.css';
-import toast from 'react-hot-toast';
 
 function RegisterForm() {
     const [formData, setFormData] = useState({
@@ -68,32 +67,30 @@ function RegisterForm() {
                 </div>
 
                 <form onSubmit={handleSubmit} className="auth-form">
-                    <div className="form-row">
-                        <div className="form-group">
-                            <label htmlFor="first_name">First Name</label>
-                            <input
-                                type="text"
-                                id="first_name"
-                                name="first_name"
-                                value={formData.first_name}
-                                onChange={handleChange}
-                                required
-                                placeholder="John"
-                            />
-                        </div>
+                    <div className="form-group">
+                        <label htmlFor="first_name">First Name</label>
+                        <input
+                            type="text"
+                            id="first_name"
+                            name="first_name"
+                            value={formData.first_name}
+                            onChange={handleChange}
+                            required
+                            placeholder="John"
+                        />
+                    </div>
 
-                        <div className="form-group">
-                            <label htmlFor="last_name">Last Name</label>
-                            <input
-                                type="text"
-                                id="last_name"
-                                name="last_name"
-                                value={formData.last_name}
-                                onChange={handleChange}
-                                required
-                                placeholder="Doe"
-                            />
-                        </div>
+                    <div className="form-group">
+                        <label htmlFor="last_name">Last Name</label>
+                        <input
+                            type="text"
+                            id="last_name"
+                            name="last_name"
+                            value={formData.last_name}
+                            onChange={handleChange}
+                            required
+                            placeholder="Doe"
+                        />
                     </div>
 
                     <div className="form-group">
