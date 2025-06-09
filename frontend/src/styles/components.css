@@ -1,0 +1,168 @@
+/* Page layouts */
+.dashboard,
+.expenses {
+    padding: 2rem 1rem;
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: calc(100vh - 4rem);
+}
+
+.dashboard__header,
+.expenses__header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 2rem;
+    gap: 1rem;
+}
+
+.dashboard__title,
+.expenses__title {
+    flex: 1;
+}
+
+.dashboard__title h1,
+.expenses__title h1 {
+    margin-bottom: 0.5rem;
+    color: #1f2937;
+}
+
+.dashboard__title p,
+.expenses__title p {
+    color: #6b7280;
+    margin-bottom: 0;
+}
+
+.dashboard__actions {
+    flex-shrink: 0;
+}
+
+/* Dashboard grid */
+.dashboard__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.dashboard__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+}
+
+.dashboard__section {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    overflow: hidden;
+}
+
+.dashboard__empty {
+    text-align: center;
+    padding: 4rem 2rem;
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.dashboard__empty h3 {
+    color: #374151;
+    margin-bottom: 0.5rem;
+}
+
+.dashboard__empty p {
+    color: #6b7280;
+    margin-bottom: 1.5rem;
+}
+
+/* Expenses layout */
+.expenses__content {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+/* Section headers */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e5e7eb;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #1f2937;
+}
+
+/* Cards and containers */
+.content-card {
+    background: white;
+    border-radius: 0.75rem;
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+    overflow: hidden;
+}
+
+.content-card__header {
+    padding: 1.5rem 1.5rem 0 1.5rem;
+    border-bottom: 1px solid #e5e7eb;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+}
+
+.content-card__content {
+    padding: 1.5rem;
+}
+
+/* Status indicators */
+.status-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.status-badge--success {
+    background-color: #d1fae5;
+    color: #065f46;
+}
+
+.status-badge--warning {
+    background-color: #fef3c7;
+    color: #92400e;
+}
+
+.status-badge--danger {
+    background-color: #fee2e2;
+    color: #991b1b;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+
+    .dashboard,
+    .expenses {
+        padding: 1rem 0.5rem;
+    }
+
+    .dashboard__header,
+    .expenses__header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1.5rem;
+    }
+
+    .dashboard__grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .content-card__header,
+    .content-card__content {
+        padding: 1rem;
+    }
+}
