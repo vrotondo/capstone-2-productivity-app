@@ -31,6 +31,7 @@ with app.app_context():
 def register():
     try:
         data = request.get_json()
+        print(f"Registration attempt for: {data.get('email')}")
         
         # Check if user already exists
         if User.query.filter_by(email=data['email']).first():
@@ -45,16 +46,18 @@ def register():
         )
         
         db.session.add(user)
-        db.session.commit()
+        db.session.flush()  # This assigns the ID to user
+        print(f"Created user with ID: {user.id}")
         
         # Create default categories
         default_categories = [
-            {'name': 'Food', 'color': '#EF4444'},
+            {'name': 'Food & Dining', 'color': '#EF4444'},
             {'name': 'Transportation', 'color': '#F59E0B'},
             {'name': 'Entertainment', 'color': '#8B5CF6'},
             {'name': 'Shopping', 'color': '#EC4899'},
-            {'name': 'Bills', 'color': '#6B7280'},
-            {'name': 'Other', 'color': '#10B981'}
+            {'name': 'Bills & Utilities', 'color': '#6B7280'},
+            {'name': 'Healthcare', 'color': '#10B981'},
+            {'name': 'Other', 'color': '#3B82F6'}
         ]
         
         for cat_data in default_categories:
@@ -64,8 +67,10 @@ def register():
                 user_id=user.id
             )
             db.session.add(category)
+            print(f"Created category: {cat_data['name']}")
         
         db.session.commit()
+        print("All data committed successfully")
         
         # Create access token
         access_token = create_access_token(identity=user.id)
@@ -77,6 +82,8 @@ def register():
         }), 201
         
     except Exception as e:
+        print(f"Registration error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/login', methods=['POST'])
@@ -120,9 +127,58 @@ def get_profile():
 def get_categories():
     try:
         user_id = get_jwt_identity()
+        print(f"Categories request for user ID: {user_id}")
         categories = Category.query.filter_by(user_id=user_id).all()
+        print(f"Found {len(categories)} categories: {[cat.name for cat in categories]}")
         return jsonify([cat.to_dict() for cat in categories]), 200
     except Exception as e:
+        print(f"Categories error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/categories/create-defaults', methods=['POST'])
+@jwt_required()
+def create_default_categories():
+    try:
+        user_id = get_jwt_identity()
+        print(f"Creating default categories for user ID: {user_id}")
+        
+        # Check if user already has categories
+        existing_categories = Category.query.filter_by(user_id=user_id).count()
+        if existing_categories > 0:
+            return jsonify({'message': f'User already has {existing_categories} categories'}), 200
+        
+        # Create default categories
+        default_categories = [
+            {'name': 'Food & Dining', 'color': '#EF4444'},
+            {'name': 'Transportation', 'color': '#F59E0B'},
+            {'name': 'Entertainment', 'color': '#8B5CF6'},
+            {'name': 'Shopping', 'color': '#EC4899'},
+            {'name': 'Bills & Utilities', 'color': '#6B7280'},
+            {'name': 'Healthcare', 'color': '#10B981'},
+            {'name': 'Other', 'color': '#3B82F6'}
+        ]
+        
+        created_categories = []
+        for cat_data in default_categories:
+            category = Category(
+                name=cat_data['name'],
+                color=cat_data['color'],
+                user_id=user_id
+            )
+            db.session.add(category)
+            created_categories.append(cat_data['name'])
+        
+        db.session.commit()
+        print(f"Created categories: {created_categories}")
+        
+        return jsonify({
+            'message': 'Default categories created successfully',
+            'categories': created_categories
+        }), 201
+        
+    except Exception as e:
+        print(f"Create default categories error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/categories', methods=['POST'])
@@ -276,9 +332,11 @@ def convert_currency(from_currency, to_currency, amount):
 def get_dashboard_data():
     try:
         user_id = get_jwt_identity()
+        print(f"Dashboard request for user ID: {user_id}")
         
         # Get recent expenses
         recent_expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).limit(5).all()
+        print(f"Found {len(recent_expenses)} recent expenses")
         
         # Get total expenses this month
         current_month = datetime.now().month
@@ -290,15 +348,19 @@ def get_dashboard_data():
         ).all()
         
         total_this_month = sum(expense.amount for expense in monthly_expenses)
+        print(f"Total this month: ${total_this_month}")
         
         # Get expenses by category this month
         category_totals = {}
         for expense in monthly_expenses:
-            cat_name = expense.category.name
-            if cat_name in category_totals:
-                category_totals[cat_name] += expense.amount
-            else:
-                category_totals[cat_name] = expense.amount
+            if expense.category:  # Check if category exists
+                cat_name = expense.category.name
+                if cat_name in category_totals:
+                    category_totals[cat_name] += expense.amount
+                else:
+                    category_totals[cat_name] = expense.amount
+        
+        print(f"Category breakdown: {category_totals}")
         
         return jsonify({
             'recent_expenses': [expense.to_dict() for expense in recent_expenses],
@@ -308,6 +370,7 @@ def get_dashboard_data():
         }), 200
         
     except Exception as e:
+        print(f"Dashboard error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ============== HEALTH CHECK ==============

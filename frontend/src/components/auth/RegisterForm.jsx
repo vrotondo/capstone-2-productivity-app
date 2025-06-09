@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import Button from '../common/Button';
+import toast from 'react-hot-toast';
 import './AuthForms.css';
 
 function RegisterForm() {
@@ -34,12 +35,20 @@ function RegisterForm() {
 
         setLoading(true);
 
+        console.log('Attempting registration with:', {
+            email: formData.email,
+            first_name: formData.first_name,
+            last_name: formData.last_name
+        });
+
         const result = await register({
             email: formData.email,
             password: formData.password,
             first_name: formData.first_name,
             last_name: formData.last_name
         });
+
+        console.log('Registration result:', result);
 
         if (result.success) {
             navigate('/dashboard');
