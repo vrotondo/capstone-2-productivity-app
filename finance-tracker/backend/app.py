@@ -1,0 +1,328 @@
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
+from models import db, User, Category, Expense, Budget
+from datetime import datetime, date
+import requests
+
+app = Flask(__name__)
+
+# Configuration
+app.config['SECRET_KEY'] = 'your-secret-key-here'
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///finance_tracker.db'
+app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
+app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
+
+# Initialize extensions
+db.init_app(app)
+jwt = JWTManager(app)
+CORS(app)
+
+# Your API key for currency conversion
+EXCHANGE_API_KEY = 'wCoOoTtNOghmt2oqx792'
+
+# Create tables
+with app.app_context():
+    db.create_all()
+
+# ============== AUTHENTICATION ROUTES ==============
+
+@app.route('/api/register', methods=['POST'])
+def register():
+    try:
+        data = request.get_json()
+        
+        # Check if user already exists
+        if User.query.filter_by(email=data['email']).first():
+            return jsonify({'error': 'Email already registered'}), 400
+        
+        # Create new user
+        user = User(
+            email=data['email'],
+            password=data['password'],
+            first_name=data['first_name'],
+            last_name=data['last_name']
+        )
+        
+        db.session.add(user)
+        db.session.commit()
+        
+        # Create default categories
+        default_categories = [
+            {'name': 'Food', 'color': '#EF4444'},
+            {'name': 'Transportation', 'color': '#F59E0B'},
+            {'name': 'Entertainment', 'color': '#8B5CF6'},
+            {'name': 'Shopping', 'color': '#EC4899'},
+            {'name': 'Bills', 'color': '#6B7280'},
+            {'name': 'Other', 'color': '#10B981'}
+        ]
+        
+        for cat_data in default_categories:
+            category = Category(
+                name=cat_data['name'],
+                color=cat_data['color'],
+                user_id=user.id
+            )
+            db.session.add(category)
+        
+        db.session.commit()
+        
+        # Create access token
+        access_token = create_access_token(identity=user.id)
+        
+        return jsonify({
+            'message': 'User created successfully',
+            'access_token': access_token,
+            'user': user.to_dict()
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/login', methods=['POST'])
+def login():
+    try:
+        data = request.get_json()
+        user = User.query.filter_by(email=data['email']).first()
+        
+        if user and user.check_password(data['password']):
+            access_token = create_access_token(identity=user.id)
+            return jsonify({
+                'message': 'Login successful',
+                'access_token': access_token,
+                'user': user.to_dict()
+            }), 200
+        else:
+            return jsonify({'error': 'Invalid credentials'}), 401
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/profile', methods=['GET'])
+@jwt_required()
+def get_profile():
+    try:
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        return jsonify({'user': user.to_dict()}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============== CATEGORY ROUTES ==============
+
+@app.route('/api/categories', methods=['GET'])
+@jwt_required()
+def get_categories():
+    try:
+        user_id = get_jwt_identity()
+        categories = Category.query.filter_by(user_id=user_id).all()
+        return jsonify([cat.to_dict() for cat in categories]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/categories', methods=['POST'])
+@jwt_required()
+def create_category():
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        category = Category(
+            name=data['name'],
+            color=data.get('color', '#3B82F6'),
+            user_id=user_id
+        )
+        
+        db.session.add(category)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Category created successfully',
+            'category': category.to_dict()
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============== EXPENSE ROUTES ==============
+
+@app.route('/api/expenses', methods=['GET'])
+@jwt_required()
+def get_expenses():
+    try:
+        user_id = get_jwt_identity()
+        expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).all()
+        return jsonify([expense.to_dict() for expense in expenses]), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/expenses', methods=['POST'])
+@jwt_required()
+def create_expense():
+    try:
+        user_id = get_jwt_identity()
+        data = request.get_json()
+        
+        # Parse date
+        expense_date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        
+        expense = Expense(
+            amount=float(data['amount']),
+            description=data['description'],
+            date=expense_date,
+            currency=data.get('currency', 'USD'),
+            user_id=user_id,
+            category_id=int(data['category_id'])
+        )
+        
+        db.session.add(expense)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Expense created successfully',
+            'expense': expense.to_dict()
+        }), 201
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/expenses/<int:expense_id>', methods=['PUT'])
+@jwt_required()
+def update_expense(expense_id):
+    try:
+        user_id = get_jwt_identity()
+        expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first()
+        
+        if not expense:
+            return jsonify({'error': 'Expense not found'}), 404
+        
+        data = request.get_json()
+        
+        # Update fields if provided
+        if 'amount' in data:
+            expense.amount = float(data['amount'])
+        if 'description' in data:
+            expense.description = data['description']
+        if 'date' in data:
+            expense.date = datetime.strptime(data['date'], '%Y-%m-%d').date()
+        if 'category_id' in data:
+            expense.category_id = int(data['category_id'])
+        if 'currency' in data:
+            expense.currency = data['currency']
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Expense updated successfully',
+            'expense': expense.to_dict()
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
+@jwt_required()
+def delete_expense(expense_id):
+    try:
+        user_id = get_jwt_identity()
+        expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first()
+        
+        if not expense:
+            return jsonify({'error': 'Expense not found'}), 404
+        
+        db.session.delete(expense)
+        db.session.commit()
+        
+        return jsonify({'message': 'Expense deleted successfully'}), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============== CURRENCY CONVERSION ==============
+
+@app.route('/api/convert/<from_currency>/<to_currency>/<amount>', methods=['GET'])
+@jwt_required()
+def convert_currency(from_currency, to_currency, amount):
+    try:
+        url = f"https://api.exchangerate-api.com/v4/latest/{from_currency}"
+        response = requests.get(url)
+        data = response.json()
+        
+        if to_currency in data['rates']:
+            rate = data['rates'][to_currency]
+            converted_amount = float(amount) * rate
+            return jsonify({
+                'from_currency': from_currency,
+                'to_currency': to_currency,
+                'original_amount': float(amount),
+                'converted_amount': converted_amount,
+                'exchange_rate': rate
+            }), 200
+        else:
+            return jsonify({'error': 'Currency not supported'}), 400
+            
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============== DASHBOARD DATA ==============
+
+@app.route('/api/dashboard', methods=['GET'])
+@jwt_required()
+def get_dashboard_data():
+    try:
+        user_id = get_jwt_identity()
+        
+        # Get recent expenses
+        recent_expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).limit(5).all()
+        
+        # Get total expenses this month
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        monthly_expenses = Expense.query.filter(
+            Expense.user_id == user_id,
+            db.extract('month', Expense.date) == current_month,
+            db.extract('year', Expense.date) == current_year
+        ).all()
+        
+        total_this_month = sum(expense.amount for expense in monthly_expenses)
+        
+        # Get expenses by category this month
+        category_totals = {}
+        for expense in monthly_expenses:
+            cat_name = expense.category.name
+            if cat_name in category_totals:
+                category_totals[cat_name] += expense.amount
+            else:
+                category_totals[cat_name] = expense.amount
+        
+        return jsonify({
+            'recent_expenses': [expense.to_dict() for expense in recent_expenses],
+            'total_this_month': total_this_month,
+            'category_breakdown': category_totals,
+            'expense_count': len(monthly_expenses)
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# ============== HEALTH CHECK ==============
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({
+        'status': 'healthy',
+        'message': 'Finance Tracker API is running',
+        'timestamp': datetime.now().isoformat()
+    }), 200
+
+if __name__ == '__main__':
+    print("🚀 Starting Finance Tracker API...")
+    print("📊 Database: SQLite (finance_tracker.db)")
+    print("🔑 Your API Key loaded successfully")
+    print("🌐 Server running on: http://localhost:5000")
+    app.run(debug=True, port=5000)
