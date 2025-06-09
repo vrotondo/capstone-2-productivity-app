@@ -49,6 +49,7 @@ export const expensesAPI = {
 export const categoriesAPI = {
     getAll: () => api.get('/categories'),
     create: (categoryData) => api.post('/categories', categoryData),
+    createDefaults: () => api.post('/categories/create-defaults'),
 };
 
 export const dashboardAPI = {
