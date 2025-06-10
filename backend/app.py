@@ -18,16 +18,18 @@ app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
 # Initialize extensions with app
 db.init_app(app)
 jwt = JWTManager(app)
-CORS(app)
+CORS(app, origins=["http://localhost:3000", "http://localhost:5173"])
 
 # Your API key for currency conversion
 EXCHANGE_API_KEY = 'wCoOoTtNOghmt2oqx792'
 
 # Create tables
 with app.app_context():
-    print("Creating database tables...")
-    db.create_all()
-    print("Database tables created successfully!")
+    try:
+        db.create_all()
+        print("Database tables created successfully!")
+    except Exception as e:
+        print(f"Database creation error: {e}")
 
 # ============== AUTHENTICATION ROUTES ==============
 
