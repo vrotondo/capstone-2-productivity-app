@@ -367,6 +367,107 @@ def get_dashboard_data():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# ============== AI ASSISTANT ==============
+@app.route('/api/expenses/categorize', methods=['POST'])
+@jwt_required()
+def categorize_expense():
+    try:
+        data = request.get_json()
+        description = data.get('description', '').strip()
+        user_id = int(get_jwt_identity())
+        
+        print(f"AI categorization request: '{description}' for user {user_id}")
+        
+        # Require minimum description length
+        if len(description) < 3:
+            return jsonify({'suggested_category': None}), 200
+        
+        # Get user's categories
+        categories = Category.query.filter_by(user_id=user_id).all()
+        category_names = [cat.name for cat in categories]
+        print(f"User categories: {category_names}")
+        
+        if not category_names:
+            return jsonify({'suggested_category': 'Other'}), 200
+        
+        # Check if Gemini is configured
+        api_key = os.getenv('GEMINI_API_KEY')
+        if not api_key:
+            print("ERROR: GEMINI_API_KEY not found in environment variables")
+            return jsonify({
+                'suggested_category': None,
+                'error': 'AI configuration missing'
+            }), 200
+        
+        print(f"Using Gemini API key: {api_key[:10]}..." if api_key else "No API key")
+        
+        # Use Gemini to categorize
+        try:
+            # Use the current model name (gemini-pro is deprecated)
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            prompt = f"""
+            Categorize this expense description: "{description}"
+            
+            Choose the BEST match from these exact categories: {', '.join(category_names)}
+            
+            Rules:
+            - Respond with ONLY the category name, exactly as written
+            - If uncertain, choose the closest match
+            - For groceries/food purchases, use "Food" if available
+            - For gas/car expenses, use "Transportation" if available
+            - For movies/games, use "Entertainment" if available
+            
+            Response: """
+            
+            print("Sending request to Gemini...")
+            response = model.generate_content(prompt)
+            print(f"Gemini response: {response.text}")
+            
+            suggested_category = response.text.strip()
+            
+            # Validate the response is actually one of our categories
+            if suggested_category not in category_names:
+                print(f"'{suggested_category}' not in categories, finding partial match...")
+                # Try to find a partial match
+                suggested_category = next(
+                    (cat for cat in category_names if cat.lower() in suggested_category.lower()),
+                    'Other' if 'Other' in category_names else category_names[0]
+                )
+                print(f"Using fallback category: {suggested_category}")
+            
+            return jsonify({
+                'suggested_category': suggested_category,
+                'confidence': 'high',
+                'description_analyzed': description
+            }), 200
+            
+        except Exception as gemini_error:
+            print(f"Gemini API error: {gemini_error}")
+            print(f"Error type: {type(gemini_error)}")
+            import traceback
+            traceback.print_exc()
+            
+            return jsonify({
+                'suggested_category': None,
+                'error': f'Gemini API error: {str(gemini_error)}'
+            }), 200
+        
+    except Exception as e:
+        print(f"General AI categorization error: {e}")
+        print(f"Error type: {type(e)}")
+        import traceback
+        traceback.print_exc()
+        
+        # Gracefully fail - don't break the expense creation
+        return jsonify({
+            'suggested_category': None,
+            'error': f'AI suggestion error: {str(e)}'
+        }), 200
+
+@app.route('/api/test-ai', methods=['GET'])
+def test_ai():
+    return jsonify({'message': 'AI endpoint working'}), 200
+
 # ============== HEALTH CHECK ==============
 
 @app.route('/api/health', methods=['GET'])
@@ -379,64 +480,3 @@ def health_check():
 if __name__ == '__main__':
     print("🚀 Starting Finance Tracker API...")
     app.run(debug=True, port=5000)
-
-# ============== AI ASSISTANT ==============
-@app.route('/api/expenses/categorize', methods=['POST'])
-@jwt_required()
-def categorize_expense():
-    try:
-        data = request.get_json()
-        description = data.get('description', '').strip()
-        user_id = int(get_jwt_identity())
-        
-        # Require minimum description length
-        if len(description) < 3:
-            return jsonify({'suggested_category': None}), 200
-        
-        # Get user's categories
-        categories = Category.query.filter_by(user_id=user_id).all()
-        category_names = [cat.name for cat in categories]
-        
-        if not category_names:
-            return jsonify({'suggested_category': 'Other'}), 200
-        
-        # Use Gemini to categorize
-        model = genai.GenerativeModel('gemini-pro')
-        prompt = f"""
-        Categorize this expense description: "{description}"
-        
-        Choose the BEST match from these exact categories: {', '.join(category_names)}
-        
-        Rules:
-        - Respond with ONLY the category name, exactly as written
-        - If uncertain, choose the closest match
-        - For groceries/food purchases, use "Food & Dining" if available
-        - For gas/car expenses, use "Transportation" if available
-        - For movies/games, use "Entertainment" if available
-        
-        Response: """
-        
-        response = model.generate_content(prompt)
-        suggested_category = response.text.strip()
-        
-        # Validate the response is actually one of our categories
-        if suggested_category not in category_names:
-            # Try to find a partial match
-            suggested_category = next(
-                (cat for cat in category_names if cat.lower() in suggested_category.lower()),
-                'Other' if 'Other' in category_names else category_names[0]
-            )
-        
-        return jsonify({
-            'suggested_category': suggested_category,
-            'confidence': 'high',
-            'description_analyzed': description
-        }), 200
-        
-    except Exception as e:
-        print(f"AI categorization error: {e}")
-        # Gracefully fail - don't break the expense creation
-        return jsonify({
-            'suggested_category': None,
-            'error': 'AI suggestion temporarily unavailable'
-        }), 200
