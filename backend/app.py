@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from datetime import datetime, date, timezone
+from sqlalchemy import text
 import requests
 import traceback
 import os
@@ -22,6 +23,37 @@ db.init_app(app)
 jwt = JWTManager(app)
 CORS(app, origins=["http://localhost:3000", "http://localhost:5173"])
 
+# JWT Error handlers
+@jwt.expired_token_loader
+def expired_token_callback(jwt_header, jwt_payload):
+    print("JWT Error: Token has expired")
+    return jsonify({'error': 'Token has expired'}), 401
+
+@jwt.invalid_token_loader
+def invalid_token_callback(error):
+    print(f"JWT Error: Invalid token - {error}")
+    return jsonify({'error': 'Invalid token'}), 422
+
+@jwt.unauthorized_loader
+def missing_token_callback(error):
+    print(f"JWT Error: Missing token - {error}")
+    return jsonify({'error': 'Missing authorization token'}), 401
+
+@jwt.additional_claims_loader
+def add_claims_to_access_token(identity):
+    return {}
+
+# Add request logging for all routes
+@app.before_request
+def log_request():
+    print(f"\n=== Incoming Request ===")
+    print(f"Method: {request.method}")
+    print(f"Path: {request.path}")
+    print(f"Headers: {dict(request.headers)}")
+    if request.get_data():
+        print(f"Body: {request.get_data()}")
+    print("========================\n")
+
 # Your API key for currency conversion
 EXCHANGE_API_KEY = os.getenv('EXCHANGE_API_KEY', 'wCoOoTtNOghmt2oqx792')
 
@@ -33,7 +65,7 @@ with app.app_context():
         print("Database tables created successfully!")
         
         # Test database connection
-        result = db.session.execute('SELECT 1').fetchone()
+        result = db.session.execute(text('SELECT 1')).fetchone()
         print(f"Database connection test: {result}")
         
     except Exception as e:
@@ -87,8 +119,8 @@ def register():
         db.session.commit()
         print("All data committed successfully")
         
-        # Create access token
-        access_token = create_access_token(identity=user.id)
+        # Create access token with string identity
+        access_token = create_access_token(identity=str(user.id))
         
         return jsonify({
             'message': 'User created successfully',
@@ -109,7 +141,7 @@ def login():
         user = User.query.filter_by(email=data['email']).first()
         
         if user and user.check_password(data['password']):
-            access_token = create_access_token(identity=user.id)
+            access_token = create_access_token(identity=str(user.id))
             return jsonify({
                 'message': 'Login successful',
                 'access_token': access_token,
@@ -126,7 +158,7 @@ def login():
 @jwt_required()
 def get_profile():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         
         if not user:
@@ -143,7 +175,7 @@ def get_profile():
 @jwt_required()
 def get_categories():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         print(f"Categories request for user ID: {user_id}")
         categories = Category.query.filter_by(user_id=user_id).all()
         print(f"Found {len(categories)} categories: {[cat.name for cat in categories]}")
@@ -156,8 +188,22 @@ def get_categories():
 @jwt_required()
 def create_default_categories():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())  # Convert string back to int
         print(f"=== Creating default categories for user ID: {user_id} ===")
+        
+        # Log the incoming request
+        print(f"Request method: {request.method}")
+        print(f"Request headers: {dict(request.headers)}")
+        print(f"Request data: {request.get_data()}")
+        print(f"Request JSON: {request.get_json()}")
+        
+        # Check if user exists
+        user = User.query.get(user_id)
+        if not user:
+            print(f"ERROR: User {user_id} not found")
+            return jsonify({'error': 'User not found'}), 404
+        
+        print(f"User found: {user.email}")
         
         # Check if user already has categories
         existing_categories = Category.query.filter_by(user_id=user_id).count()
@@ -185,34 +231,49 @@ def create_default_categories():
         created_categories = []
         for cat_data in default_categories:
             print(f"Creating category: {cat_data['name']}")
-            category = Category(
-                name=cat_data['name'],
-                color=cat_data['color'],
-                user_id=user_id
-            )
-            db.session.add(category)
-            created_categories.append(category)
+            
+            try:
+                category = Category(
+                    name=cat_data['name'],
+                    color=cat_data['color'],
+                    user_id=user_id
+                )
+                db.session.add(category)
+                created_categories.append(category)
+                print(f"Added {cat_data['name']} to session")
+            except Exception as cat_error:
+                print(f"Error creating category {cat_data['name']}: {str(cat_error)}")
+                raise cat_error
         
         print("Attempting to commit to database...")
         db.session.commit()
-        print(f"Successfully created {len(created_categories)} categories")
+        print(f"Successfully committed {len(created_categories)} categories")
+        
+        # Get fresh data from database
+        final_categories = Category.query.filter_by(user_id=user_id).all()
+        print(f"Final category count: {len(final_categories)}")
         
         return jsonify({
             'message': 'Default categories created successfully',
-            'categories': [cat.to_dict() for cat in created_categories]
+            'categories': [cat.to_dict() for cat in final_categories],
+            'count': len(final_categories)
         }), 201
         
     except Exception as e:
         print(f"ERROR in create_default_categories: {str(e)}")
+        print(f"Error type: {type(e).__name__}")
         print(f"Full traceback: {traceback.format_exc()}")
         db.session.rollback()
-        return jsonify({'error': f'Failed to create categories: {str(e)}'}), 500
+        return jsonify({
+            'error': f'Failed to create categories: {str(e)}',
+            'error_type': type(e).__name__
+        }), 500
 
 @app.route('/api/categories', methods=['POST'])
 @jwt_required()
 def create_category():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         data = request.get_json()
         
         category = Category(
@@ -240,7 +301,7 @@ def create_category():
 @jwt_required()
 def get_expenses():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).all()
         return jsonify([expense.to_dict() for expense in expenses]), 200
     except Exception as e:
@@ -251,7 +312,7 @@ def get_expenses():
 @jwt_required()
 def create_expense():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         data = request.get_json()
         
         # Parse date
@@ -283,7 +344,7 @@ def create_expense():
 @jwt_required()
 def update_expense(expense_id):
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first()
         
         if not expense:
@@ -319,7 +380,7 @@ def update_expense(expense_id):
 @jwt_required()
 def delete_expense(expense_id):
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         expense = Expense.query.filter_by(id=expense_id, user_id=user_id).first()
         
         if not expense:
@@ -368,7 +429,7 @@ def convert_currency(from_currency, to_currency, amount):
 @jwt_required()
 def get_dashboard_data():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         print(f"Dashboard request for user ID: {user_id}")
         
         # Get recent expenses
@@ -424,11 +485,11 @@ def health_check():
 def test_db():
     try:
         # Test basic database connection
-        result = db.session.execute('SELECT 1').fetchone()
+        result = db.session.execute(text('SELECT 1')).fetchone()
         
         # Test table existence
         tables = db.session.execute(
-            "SELECT name FROM sqlite_master WHERE type='table'"
+            text("SELECT name FROM sqlite_master WHERE type='table'")
         ).fetchall()
         
         return jsonify({
@@ -446,7 +507,7 @@ def test_db():
 @jwt_required()
 def debug_user():
     try:
-        user_id = get_jwt_identity()
+        user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         categories = Category.query.filter_by(user_id=user_id).all()
         
@@ -458,6 +519,87 @@ def debug_user():
             'categories': [cat.name for cat in categories]
         }), 200
     except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/debug/token', methods=['GET'])
+@jwt_required()
+def debug_token():
+    try:
+        user_id = int(get_jwt_identity())
+        return jsonify({
+            'token_valid': True,
+            'user_id': user_id,
+            'message': 'JWT token is valid'
+        }), 200
+    except Exception as e:
+        return jsonify({
+            'token_valid': False,
+            'error': str(e)
+        }), 500
+
+# Add a simple test endpoint that doesn't require authentication
+@app.route('/api/test-simple', methods=['POST'])
+def test_simple():
+    try:
+        print(f"=== Simple test endpoint ===")
+        print(f"Request method: {request.method}")
+        print(f"Request data: {request.get_data()}")
+        print(f"Request JSON: {request.get_json()}")
+        
+        return jsonify({
+            'message': 'Simple test successful',
+            'method': request.method,
+            'has_data': bool(request.get_data())
+        }), 200
+    except Exception as e:
+        print(f"Simple test error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+
+# Test endpoint to create categories without JWT (temporary)
+@app.route('/api/test-categories', methods=['POST'])
+def test_create_categories():
+    try:
+        print(f"=== Test create categories (no JWT) ===")
+        
+        # Hardcode user ID 1 for testing
+        user_id = 1
+        
+        # Check if user exists
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': f'User {user_id} not found'}), 404
+        
+        print(f"User found: {user.email}")
+        
+        # Check existing categories
+        existing_categories = Category.query.filter_by(user_id=user_id).count()
+        print(f"User currently has {existing_categories} categories")
+        
+        if existing_categories > 0:
+            categories = Category.query.filter_by(user_id=user_id).all()
+            return jsonify({
+                'message': f'User already has {existing_categories} categories',
+                'categories': [cat.to_dict() for cat in categories]
+            }), 200
+        
+        # Create one test category
+        category = Category(
+            name='Test Category',
+            color='#FF0000',
+            user_id=user_id
+        )
+        db.session.add(category)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Test category created successfully',
+            'category': category.to_dict()
+        }), 201
+        
+    except Exception as e:
+        print(f"Test categories error: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
