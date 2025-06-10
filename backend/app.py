@@ -3,6 +3,7 @@ from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
 from datetime import datetime, date
 import requests
+import os
 
 # Import db and models from models.py (no circular import now)
 from models import db, User, Category, Expense, Budget
@@ -22,6 +23,7 @@ CORS(app, origins=["http://localhost:3000", "http://localhost:5173"])
 
 # Your API key for currency conversion
 EXCHANGE_API_KEY = 'wCoOoTtNOghmt2oqx792'
+EXCHANGE_API_KEY = os.getenv('EXCHANGE_API_KEY', 'your-default-key')
 
 # Create tables
 with app.app_context():

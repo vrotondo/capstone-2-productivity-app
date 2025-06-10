@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime
 import hashlib
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Create db instance here - no circular import
 db = SQLAlchemy()
@@ -21,12 +22,12 @@ class User(db.Model):
     
     def __init__(self, email, password, first_name, last_name):
         self.email = email
-        self.password_hash = hashlib.sha256(password.encode()).hexdigest()
+        self.password_hash = generate_password_hash(password)
         self.first_name = first_name
         self.last_name = last_name
-    
+
     def check_password(self, password):
-        return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
+        return check_password_hash(self.password_hash, password)
     
     def to_dict(self):
         return {
