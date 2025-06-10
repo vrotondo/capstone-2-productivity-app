@@ -226,34 +226,6 @@ function Dashboard() {
                 </div>
                 <div className="dashboard__actions">
                     <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={testDatabaseConnection}
-                    >
-                        🔧 Test DB
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={testJwtToken}
-                    >
-                        🔑 Test JWT
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="small"
-                        onClick={testCategoriesWithoutJWT}
-                    >
-                        🧪 Test Categories
-                    </Button>
-                    <Button
-                        variant="warning"
-                        size="small"
-                        onClick={forceRelogin}
-                    >
-                        🔄 Force Re-login
-                    </Button>
-                    <Button
                         variant="secondary"
                         size="small"
                         onClick={createDefaultCategories}
