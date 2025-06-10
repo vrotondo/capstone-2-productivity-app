@@ -181,6 +181,38 @@ function Dashboard() {
         }
     };
 
+    const resetPassword = async () => {
+        try {
+            const email = prompt('Enter your email:');
+            const password = prompt('Enter your new password:');
+
+            if (!email || !password) {
+                toast.error('Email and password required');
+                return;
+            }
+
+            const response = await fetch('http://localhost:5000/api/debug/reset-password', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            console.log('Password reset result:', data);
+
+            if (response.ok) {
+                toast.success('Password reset successful! You can now log in.');
+            } else {
+                toast.error(`Password reset failed: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Password reset error:', error);
+            toast.error('Password reset failed');
+        }
+    };
+
     if (loading) {
         return <LoadingSpinner message="Loading your dashboard..." />;
     }

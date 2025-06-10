@@ -1,7 +1,6 @@
 from flask_sqlalchemy import SQLAlchemy
 from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
-import hashlib
 
 # Create db instance here - no circular import
 db = SQLAlchemy()
@@ -9,7 +8,7 @@ db = SQLAlchemy()
 class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(120), unique=True, nullable=False)
-    password_hash = db.Column(db.String(128), nullable=False)
+    password_hash = db.Column(db.String(200), nullable=False)  # Increased size for scrypt
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     default_currency = db.Column(db.String(3), default='USD')
@@ -22,25 +21,12 @@ class User(db.Model):
     
     def __init__(self, email, password, first_name, last_name):
         self.email = email
-        # For new users, use Werkzeug hashing
         self.password_hash = generate_password_hash(password)
         self.first_name = first_name
         self.last_name = last_name
     
     def check_password(self, password):
-        # First try the new Werkzeug method
-        if self.password_hash.startswith('pbkdf2:'):
-            return check_password_hash(self.password_hash, password)
-        else:
-            # Fall back to old SHA256 method for existing users
-            return self.password_hash == hashlib.sha256(password.encode()).hexdigest()
-    
-    def upgrade_password(self, password):
-        """Upgrade an old SHA256 password to Werkzeug format"""
-        if not self.password_hash.startswith('pbkdf2:'):
-            self.password_hash = generate_password_hash(password)
-            return True
-        return False
+        return check_password_hash(self.password_hash, password)
     
     def to_dict(self):
         return {
