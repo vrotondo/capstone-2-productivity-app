@@ -11,9 +11,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -22,6 +24,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -39,4 +42,36 @@
 
 .read-the-docs {
   color: #888;
+}
+
+.ai-suggestion {
+  margin-top: 5px;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  animation: fadeIn 0.3s ease-in;
+}
+
+.ai-suggestion.loading {
+  background-color: #f3f4f6;
+  color: #6b7280;
+  border-left: 3px solid #3b82f6;
+}
+
+.ai-suggestion.success {
+  background-color: #ecfdf5;
+  color: #059669;
+  border-left: 3px solid #10b981;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

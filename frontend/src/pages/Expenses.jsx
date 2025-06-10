@@ -123,6 +123,92 @@ function Expenses() {
         return <LoadingSpinner message="Loading expenses..." />;
     }
 
+    const [suggestedCategory, setSuggestedCategory] = useState('');
+    const [isLoadingAI, setIsLoadingAI] = useState(false);
+    const [aiDebounceTimer, setAiDebounceTimer] = useState(null);
+
+    // Add this function to get AI suggestions
+    const getSuggestion = async (description) => {
+        if (!description || description.length < 3) {
+            setSuggestedCategory('');
+            return;
+        }
+
+        setIsLoadingAI(true);
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch('http://localhost:5000/api/expenses/categorize', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ description })
+            });
+
+            const data = await response.json();
+
+            if (data.suggested_category) {
+                setSuggestedCategory(data.suggested_category);
+
+                // Auto-select the suggested category
+                const suggestedCat = categories.find(cat => cat.name === data.suggested_category);
+                if (suggestedCat) {
+                    setCategoryId(suggestedCat.id);
+                }
+            }
+
+        } catch (error) {
+            console.error('AI suggestion failed:', error);
+        } finally {
+            setIsLoadingAI(false);
+        }
+    };
+
+    // Add this function to handle description changes with debouncing
+    const handleDescriptionChange = (e) => {
+        const newDescription = e.target.value;
+        setDescription(newDescription);
+
+        // Clear existing timer
+        if (aiDebounceTimer) {
+            clearTimeout(aiDebounceTimer);
+        }
+
+        // Set new timer for AI suggestion
+        const newTimer = setTimeout(() => {
+            getSuggestion(newDescription);
+        }, 1500); // Wait 1.5 seconds after user stops typing
+
+        setAiDebounceTimer(newTimer);
+    };
+
+    // Update your description input JSX
+    <div className="form-group">
+        <label htmlFor="description">Description</label>
+        <input
+            type="text"
+            id="description"
+            value={description}
+            onChange={handleDescriptionChange}
+            placeholder="Enter expense description..."
+            required
+        />
+
+        {/* AI Suggestion Display */}
+        {isLoadingAI && (
+            <div className="ai-suggestion loading">
+                <span>🤖 AI is analyzing...</span>
+            </div>
+        )}
+
+        {suggestedCategory && !isLoadingAI && (
+            <div className="ai-suggestion success">
+                <span>🎯 AI suggests: <strong>{suggestedCategory}</strong></span>
+            </div>
+        )}
+    </div>
+
     return (
         <div className="expenses">
             <div className="expenses__header">
