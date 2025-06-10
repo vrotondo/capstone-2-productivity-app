@@ -1,8 +1,9 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, jwt_required, create_access_token, get_jwt_identity
-from datetime import datetime, date
+from datetime import datetime, date, timezone
 import requests
+import traceback
 import os
 
 # Import db and models from models.py (no circular import now)
@@ -11,10 +12,10 @@ from models import db, User, Category, Expense, Budget
 app = Flask(__name__)
 
 # Configuration
-app.config['SECRET_KEY'] = 'your-secret-key-here'
-app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///finance_tracker.db'
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
+app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///finance_tracker.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['JWT_SECRET_KEY'] = 'jwt-secret-string'
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
 
 # Initialize extensions with app
 db.init_app(app)
@@ -22,16 +23,22 @@ jwt = JWTManager(app)
 CORS(app, origins=["http://localhost:3000", "http://localhost:5173"])
 
 # Your API key for currency conversion
-EXCHANGE_API_KEY = 'wCoOoTtNOghmt2oqx792'
-EXCHANGE_API_KEY = os.getenv('EXCHANGE_API_KEY', 'your-default-key')
+EXCHANGE_API_KEY = os.getenv('EXCHANGE_API_KEY', 'wCoOoTtNOghmt2oqx792')
 
 # Create tables
 with app.app_context():
     try:
+        print("Creating database tables...")
         db.create_all()
         print("Database tables created successfully!")
+        
+        # Test database connection
+        result = db.session.execute('SELECT 1').fetchone()
+        print(f"Database connection test: {result}")
+        
     except Exception as e:
         print(f"Database creation error: {e}")
+        print(f"Full traceback: {traceback.format_exc()}")
 
 # ============== AUTHENTICATION ROUTES ==============
 
@@ -91,6 +98,7 @@ def register():
         
     except Exception as e:
         print(f"Registration error: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
         db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
@@ -111,6 +119,7 @@ def login():
             return jsonify({'error': 'Invalid credentials'}), 401
             
     except Exception as e:
+        print(f"Login error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/profile', methods=['GET'])
@@ -148,12 +157,19 @@ def get_categories():
 def create_default_categories():
     try:
         user_id = get_jwt_identity()
-        print(f"Creating default categories for user ID: {user_id}")
+        print(f"=== Creating default categories for user ID: {user_id} ===")
         
         # Check if user already has categories
         existing_categories = Category.query.filter_by(user_id=user_id).count()
+        print(f"User currently has {existing_categories} categories")
+        
         if existing_categories > 0:
-            return jsonify({'message': f'User already has {existing_categories} categories'}), 200
+            print("User already has categories, returning existing ones")
+            categories = Category.query.filter_by(user_id=user_id).all()
+            return jsonify({
+                'message': f'User already has {existing_categories} categories',
+                'categories': [cat.to_dict() for cat in categories]
+            }), 200
         
         # Create default categories
         default_categories = [
@@ -168,26 +184,29 @@ def create_default_categories():
         
         created_categories = []
         for cat_data in default_categories:
+            print(f"Creating category: {cat_data['name']}")
             category = Category(
                 name=cat_data['name'],
                 color=cat_data['color'],
                 user_id=user_id
             )
             db.session.add(category)
-            created_categories.append(cat_data['name'])
+            created_categories.append(category)
         
+        print("Attempting to commit to database...")
         db.session.commit()
-        print(f"Created categories: {created_categories}")
+        print(f"Successfully created {len(created_categories)} categories")
         
         return jsonify({
             'message': 'Default categories created successfully',
-            'categories': created_categories
+            'categories': [cat.to_dict() for cat in created_categories]
         }), 201
         
     except Exception as e:
-        print(f"Create default categories error: {str(e)}")
+        print(f"ERROR in create_default_categories: {str(e)}")
+        print(f"Full traceback: {traceback.format_exc()}")
         db.session.rollback()
-        return jsonify({'error': str(e)}), 500
+        return jsonify({'error': f'Failed to create categories: {str(e)}'}), 500
 
 @app.route('/api/categories', methods=['POST'])
 @jwt_required()
@@ -211,6 +230,8 @@ def create_category():
         }), 201
         
     except Exception as e:
+        print(f"Create category error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # ============== EXPENSE ROUTES ==============
@@ -223,6 +244,7 @@ def get_expenses():
         expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).all()
         return jsonify([expense.to_dict() for expense in expenses]), 200
     except Exception as e:
+        print(f"Get expenses error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/expenses', methods=['POST'])
@@ -253,6 +275,8 @@ def create_expense():
         }), 201
         
     except Exception as e:
+        print(f"Create expense error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/expenses/<int:expense_id>', methods=['PUT'])
@@ -287,6 +311,8 @@ def update_expense(expense_id):
         }), 200
         
     except Exception as e:
+        print(f"Update expense error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 @app.route('/api/expenses/<int:expense_id>', methods=['DELETE'])
@@ -305,6 +331,8 @@ def delete_expense(expense_id):
         return jsonify({'message': 'Expense deleted successfully'}), 200
         
     except Exception as e:
+        print(f"Delete expense error: {str(e)}")
+        db.session.rollback()
         return jsonify({'error': str(e)}), 500
 
 # ============== CURRENCY CONVERSION ==============
@@ -331,6 +359,7 @@ def convert_currency(from_currency, to_currency, amount):
             return jsonify({'error': 'Currency not supported'}), 400
             
     except Exception as e:
+        print(f"Currency conversion error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
 # ============== DASHBOARD DATA ==============
@@ -390,6 +419,28 @@ def health_check():
         'message': 'Finance Tracker API is running',
         'timestamp': datetime.now().isoformat()
     }), 200
+
+@app.route('/api/test-db', methods=['GET'])
+def test_db():
+    try:
+        # Test basic database connection
+        result = db.session.execute('SELECT 1').fetchone()
+        
+        # Test table existence
+        tables = db.session.execute(
+            "SELECT name FROM sqlite_master WHERE type='table'"
+        ).fetchall()
+        
+        return jsonify({
+            'db_connection': 'OK',
+            'tables': [table[0] for table in tables],
+            'test_query': result[0] if result else None
+        })
+    except Exception as e:
+        return jsonify({
+            'error': str(e),
+            'db_connection': 'FAILED'
+        }), 500
 
 @app.route('/api/debug/user', methods=['GET'])
 @jwt_required()

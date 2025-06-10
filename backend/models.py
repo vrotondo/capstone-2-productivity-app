@@ -1,6 +1,5 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
-import hashlib
+from datetime import datetime, timezone
 from werkzeug.security import generate_password_hash, check_password_hash
 
 # Create db instance here - no circular import
@@ -13,7 +12,7 @@ class User(db.Model):
     first_name = db.Column(db.String(50), nullable=False)
     last_name = db.Column(db.String(50), nullable=False)
     default_currency = db.Column(db.String(3), default='USD')
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
     expenses = db.relationship('Expense', backref='user', lazy=True, cascade='all, delete-orphan')
@@ -25,7 +24,7 @@ class User(db.Model):
         self.password_hash = generate_password_hash(password)
         self.first_name = first_name
         self.last_name = last_name
-
+    
     def check_password(self, password):
         return check_password_hash(self.password_hash, password)
     
@@ -44,11 +43,14 @@ class Category(db.Model):
     name = db.Column(db.String(50), nullable=False)
     color = db.Column(db.String(7), default='#3B82F6')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     # Relationships
-    expenses = db.relationship('Expense', backref='category', lazy=True)
-    budgets = db.relationship('Budget', backref='category', lazy=True)
+    expenses = db.relationship('Expense', backref='category', lazy=True, cascade='all, delete-orphan')
+    budgets = db.relationship('Budget', backref='category', lazy=True, cascade='all, delete-orphan')
+    
+    # Ensure unique category names per user
+    __table_args__ = (db.UniqueConstraint('name', 'user_id', name='unique_category_per_user'),)
     
     def to_dict(self):
         return {
@@ -64,11 +66,11 @@ class Expense(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     amount = db.Column(db.Float, nullable=False)
     description = db.Column(db.String(200), nullable=False)
-    date = db.Column(db.Date, nullable=False, default=datetime.utcnow().date())
+    date = db.Column(db.Date, nullable=False, default=lambda: datetime.now(timezone.utc).date())
     currency = db.Column(db.String(3), default='USD')
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
     
     def to_dict(self):
         return {
@@ -91,7 +93,10 @@ class Budget(db.Model):
     year = db.Column(db.Integer, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     category_id = db.Column(db.Integer, db.ForeignKey('category.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    created_at = db.Column(db.DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Ensure unique budget per category per month per user
+    __table_args__ = (db.UniqueConstraint('user_id', 'category_id', 'month', 'year', name='unique_budget_per_category_month'),)
     
     def to_dict(self):
         return {
