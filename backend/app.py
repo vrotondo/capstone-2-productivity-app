@@ -138,16 +138,27 @@ def register():
 def login():
     try:
         data = request.get_json()
+        print(f"Login attempt for: {data.get('email')}")
         user = User.query.filter_by(email=data['email']).first()
         
         if user and user.check_password(data['password']):
+            print(f"Password check successful for user: {user.email}")
+            
+            # Automatically upgrade old passwords to new format
+            if user.upgrade_password(data['password']):
+                db.session.commit()
+                print(f"Password upgraded to new format for user: {user.email}")
+            
             access_token = create_access_token(identity=str(user.id))
+            print(f"Created access token for user ID: {user.id}")
+            
             return jsonify({
                 'message': 'Login successful',
                 'access_token': access_token,
                 'user': user.to_dict()
             }), 200
         else:
+            print(f"Login failed for: {data.get('email')} - invalid credentials")
             return jsonify({'error': 'Invalid credentials'}), 401
             
     except Exception as e:
@@ -555,8 +566,68 @@ def test_simple():
         print(f"Simple test error: {str(e)}")
         return jsonify({'error': str(e)}), 500
 
-# Test endpoint to create categories without JWT (temporary)
-@app.route('/api/test-categories', methods=['POST'])
+# Debug endpoint to check user data
+@app.route('/api/debug/users', methods=['GET'])
+def debug_users():
+    try:
+        users = User.query.all()
+        user_data = []
+        for user in users:
+            user_data.append({
+                'id': user.id,
+                'email': user.email,
+                'password_hash_type': 'werkzeug' if user.password_hash.startswith('pbkdf2:') else 'sha256',
+                'password_hash_length': len(user.password_hash),
+                'created_at': user.created_at.isoformat() if user.created_at else None
+            })
+        
+        return jsonify({
+            'users': user_data,
+            'total_users': len(users)
+        }), 200
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+# Test login endpoint
+@app.route('/api/test-login', methods=['POST'])
+def test_login():
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        
+        print(f"=== Testing login for: {email} ===")
+        
+        user = User.query.filter_by(email=email).first()
+        if not user:
+            print(f"User not found: {email}")
+            return jsonify({'error': 'User not found'}), 404
+        
+        print(f"User found: {user.email}")
+        print(f"Password hash type: {'werkzeug' if user.password_hash.startswith('pbkdf2:') else 'sha256'}")
+        print(f"Password hash: {user.password_hash[:20]}...")
+        
+        # Test password check
+        password_valid = user.check_password(password)
+        print(f"Password valid: {password_valid}")
+        
+        if password_valid:
+            return jsonify({
+                'message': 'Login test successful',
+                'user_id': user.id,
+                'email': user.email,
+                'password_hash_type': 'werkzeug' if user.password_hash.startswith('pbkdf2:') else 'sha256'
+            }), 200
+        else:
+            return jsonify({
+                'error': 'Invalid password',
+                'user_found': True,
+                'password_hash_type': 'werkzeug' if user.password_hash.startswith('pbkdf2:') else 'sha256'
+            }), 401
+            
+    except Exception as e:
+        print(f"Test login error: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 def test_create_categories():
     try:
         print(f"=== Test create categories (no JWT) ===")

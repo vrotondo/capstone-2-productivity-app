@@ -124,6 +124,63 @@ function Dashboard() {
         }
     };
 
+    const forceRelogin = () => {
+        // Clear old token and force re-login
+        localStorage.removeItem('token');
+        localStorage.removeItem('user');
+        toast.success('Logged out! Please log in again to get a fresh token.');
+        window.location.href = '/login';
+    };
+
+    const debugUsers = async () => {
+        try {
+            const response = await fetch('http://localhost:5000/api/debug/users');
+            const data = await response.json();
+            console.log('Users debug result:', data);
+
+            if (response.ok) {
+                toast.success(`Found ${data.total_users} users. Check console for details.`);
+            } else {
+                toast.error(`Debug failed: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Debug users error:', error);
+            toast.error('Failed to debug users');
+        }
+    };
+
+    const testLogin = async () => {
+        try {
+            const email = prompt('Enter your email:');
+            const password = prompt('Enter your password:');
+
+            if (!email || !password) {
+                toast.error('Email and password required');
+                return;
+            }
+
+            const response = await fetch('http://localhost:5000/api/test-login', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await response.json();
+            console.log('Test login result:', data);
+
+            if (response.ok) {
+                toast.success(`Login test successful! Password type: ${data.password_hash_type}`);
+            } else {
+                toast.error(`Login test failed: ${data.error}`);
+            }
+        } catch (error) {
+            console.error('Test login error:', error);
+            toast.error('Test login failed');
+        }
+    };
+
     if (loading) {
         return <LoadingSpinner message="Loading your dashboard..." />;
     }
@@ -156,6 +213,13 @@ function Dashboard() {
                         onClick={testCategoriesWithoutJWT}
                     >
                         🧪 Test Categories
+                    </Button>
+                    <Button
+                        variant="warning"
+                        size="small"
+                        onClick={forceRelogin}
+                    >
+                        🔄 Force Re-login
                     </Button>
                     <Button
                         variant="secondary"
@@ -216,6 +280,12 @@ function Dashboard() {
                                 onClick={testCategoriesWithoutJWT}
                             >
                                 🧪 Test Categories
+                            </Button>
+                            <Button
+                                variant="warning"
+                                onClick={forceRelogin}
+                            >
+                                🔄 Force Re-login
                             </Button>
                             <Button
                                 variant="secondary"
