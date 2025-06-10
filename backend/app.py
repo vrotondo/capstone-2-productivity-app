@@ -6,18 +6,23 @@ from sqlalchemy import text
 from werkzeug.security import check_password_hash
 import requests
 import traceback
+import google.generativeai as genai
 import os
+from dotenv import load_dotenv
 
 # Import db and models from models.py
 from models import db, User, Category, Expense, Budget
 
 app = Flask(__name__)
 
+load_dotenv()
+
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
 app.config['SQLALCHEMY_DATABASE_URI'] = os.getenv('DATABASE_URL', 'sqlite:///finance_tracker.db')
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY', 'jwt-secret-string')
+genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 
 # Initialize extensions
 db.init_app(app)
@@ -374,3 +379,64 @@ def health_check():
 if __name__ == '__main__':
     print("🚀 Starting Finance Tracker API...")
     app.run(debug=True, port=5000)
+
+# ============== AI ASSISTANT ==============
+@app.route('/api/expenses/categorize', methods=['POST'])
+@jwt_required()
+def categorize_expense():
+    try:
+        data = request.get_json()
+        description = data.get('description', '').strip()
+        user_id = int(get_jwt_identity())
+        
+        # Require minimum description length
+        if len(description) < 3:
+            return jsonify({'suggested_category': None}), 200
+        
+        # Get user's categories
+        categories = Category.query.filter_by(user_id=user_id).all()
+        category_names = [cat.name for cat in categories]
+        
+        if not category_names:
+            return jsonify({'suggested_category': 'Other'}), 200
+        
+        # Use Gemini to categorize
+        model = genai.GenerativeModel('gemini-pro')
+        prompt = f"""
+        Categorize this expense description: "{description}"
+        
+        Choose the BEST match from these exact categories: {', '.join(category_names)}
+        
+        Rules:
+        - Respond with ONLY the category name, exactly as written
+        - If uncertain, choose the closest match
+        - For groceries/food purchases, use "Food & Dining"
+        - For gas/car expenses, use "Transportation" 
+        - For movies/games, use "Entertainment"
+        
+        Response: """
+        
+        response = model.generate_content(prompt)
+        suggested_category = response.text.strip()
+        
+        # Validate the response is actually one of our categories
+        if suggested_category not in category_names:
+            # Try to find a partial match
+            suggested_category = next(
+                (cat for cat in category_names if cat.lower() in suggested_category.lower()),
+                'Other'
+            )
+        
+        return jsonify({
+            'suggested_category': suggested_category,
+            'confidence': 'high',
+            'description_analyzed': description
+        }), 200
+        
+    except Exception as e:
+        print(f"AI categorization error: {e}")
+        # Gracefully fail - don't break the expense creation
+        return jsonify({
+            'suggested_category': None,
+            'error': 'AI suggestion temporarily unavailable'
+        }), 200
