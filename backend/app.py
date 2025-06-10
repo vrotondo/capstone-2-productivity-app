@@ -13,9 +13,9 @@ from dotenv import load_dotenv
 # Import db and models from models.py
 from models import db, User, Category, Expense, Budget
 
-app = Flask(__name__)
+load_dotenv() # Load environment variables from .env file
 
-load_dotenv()
+app = Flask(__name__)
 
 # Configuration
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'your-secret-key-here')
@@ -410,9 +410,9 @@ def categorize_expense():
         Rules:
         - Respond with ONLY the category name, exactly as written
         - If uncertain, choose the closest match
-        - For groceries/food purchases, use "Food & Dining"
-        - For gas/car expenses, use "Transportation" 
-        - For movies/games, use "Entertainment"
+        - For groceries/food purchases, use "Food & Dining" if available
+        - For gas/car expenses, use "Transportation" if available
+        - For movies/games, use "Entertainment" if available
         
         Response: """
         
@@ -424,7 +424,7 @@ def categorize_expense():
             # Try to find a partial match
             suggested_category = next(
                 (cat for cat in category_names if cat.lower() in suggested_category.lower()),
-                'Other'
+                'Other' if 'Other' in category_names else category_names[0]
             )
         
         return jsonify({
