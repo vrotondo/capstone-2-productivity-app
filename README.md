@@ -1,141 +1,233 @@
-In this project, you’ll build a full-stack productivity application that solves a real-world user problem. You’ll design and implement a complete software system from scratch using React for the frontend and Flask for the backend. The app should store user-created data in a relational database, provide a responsive interface, and allow for full CRUD operations on at least two related resources (minimum—more are encouraged if your app concept supports it).
+# Finance Tracker
 
-In this project, you’ll define your own business problem and solution, aligning your idea with user needs. You’ll demonstrate your ability to scope, build, debug, and refine a full-stack application using professional tools and workflows.
+A full-stack web application for personal expense tracking and budget management. Built with React frontend and Flask backend.
 
-Scenario
-You’re encouraged to integrate a third-party API or an AI-powered service (e.g., OpenAI, weather, scheduling, or time-tracking) if it enhances your application, but this is optional. What matters most is that your app solves a clearly scoped productivity-related problem through thoughtful user interface and backend design.
+## Features
 
-Your project will have the following requirements: 
+- **User Authentication**: Secure registration and login with JWT tokens
+- **Expense Management**: Add, edit, and delete personal expenses
+- **Category Organization**: Organize expenses into customizable categories
+- **Dashboard Overview**: View expense summaries and recent activity
+- **Data Persistence**: All data stored securely in SQLite database
+- **Responsive Design**: Works on desktop and mobile devices
 
-Design the data models, API endpoints, and React component structure.
-Implement CRUD functionality and user interaction flows.
-Handle asynchronous communication between frontend and backend.
-Manage application state, loading/error handling, and persistence.
-Write clean, modular, and reusable code.
-Present your final product via a professional video walkthrough and written reflection.
-The solution should be grounded in a real-world problem that users face, whether it’s productivity, education, creativity, wellness, or another domain. You are responsible for building the frontend and backend from scratch and delivering a working, documented, and demo-ready product.
+## Technology Stack
 
-Deliverables
-You must produce the following:
+### Frontend
+- React 18
+- React Router for navigation
+- CSS3 for styling
+- Fetch API for HTTP requests
 
-Part 1: Project Pitch
-This pitch simulates the planning phase of a professional product lifecycle, helping you strengthen your ability to define project goals, structure your workflow, and deliver a scoped, achievable product.
+### Backend
+- Flask web framework
+- SQLAlchemy ORM for database operations
+- Flask-JWT-Extended for authentication
+- Flask-CORS for cross-origin requests
+- SQLite database
 
-Part 2: Minimum Viable Project (MVP) Discussion
-In this discussion, you’ll be sharing a ~90% complete version, or MVP (Minimum Viable Product, of your full-stack Productivity application. This version should include the core functionality and structure, such as working user authentication, at least two interactive resources, and database integration.
+## Project Structure
 
-Part 3: Project 2- Productivity Full-Stack Application
-A GitHub repo with all frontend and backend code.
+```
+finance-tracker/
+├── frontend/
+│   ├── src/
+│   │   ├── components/     # Reusable UI components
+│   │   ├── pages/         # Main application pages
+│   │   ├── styles/        # CSS stylesheets
+│   │   └── App.js         # Main React component
+│   ├── public/
+│   └── package.json
+├── backend/
+│   ├── app.py            # Flask application entry point
+│   ├── models.py         # Database models
+│   └── requirements.txt  # Python dependencies
+└── README.md
+```
 
-A functioning Flask backend with at least 2 database tables and corresponding models (minimum). You may extend this with more tables if needed.
-A React frontend that manages app state, displays API responses, and interacts with user input.
-A README with installation and usage instructions, routes, API info, and screenshots.
-Part 4: Showcase Productivity Full-Stack Application- Discussion
-For this final showcase, you will present your Productivity Full-Stack Application in a video walkthrough (max 10 minutes) and provide a concise visual aid (e.g., slide deck, live demo, or annotated code walkthrough).
+## Installation
 
-Your goal is to explain how your project solves a real-world problem, highlight your technical decision-making, and demonstrate both frontend and backend features.
+### Prerequisites
+- Node.js (v14 or higher)
+- Python 3.8+
+- npm or yarn package manager
 
-You will also share a written reflection about your development process and participate in a peer review to give and receive actionable feedback.
+### Backend Setup
 
-Resources or Tools
-You are responsible for building the entire React frontend and Flask backend. Here’s what you’ll need:
+1. Navigate to the backend directory:
+```bash
+cd backend
+```
 
-Required Tools
-GitLinks to an external site. & GitHubLinks to an external site.
-PostmanLinks to an external site.
-ChromeLinks to an external site.
-Code Editor or IDE (VisualStudioCode)
+2. Create a virtual environment (recommended):
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
 
-Flask Backend
-FlaskLinks to an external site.
-Flask-BcryptLinks to an external site.
-Flask LoginLinks to an external site.
-Flask- JWT- ExtendedLinks to an external site.
-marshmallowLinks to an external site.
-SQLAlchemyLinks to an external site.
-JavaScript (ES6+)
-PostgreSQL
+3. Install Python dependencies:
+```bash
+pip install -r requirements.txt
+```
 
-React Frontend
-React RouterLinks to an external site.
-React HooksLinks to an external site.
-Any external React packages may be used (such as packages with drag-and-drop, calendars, charts, or other functionality that could benefit your project)
-Tailwind CSSLinks to an external site., Chakra UILinks to an external site., or another styling library
-A hosting provider with a free tier such as NetlifyLinks to an external site. or Vercel
+4. Start the Flask server:
+```bash
+python app.py
+```
 
-(Optional) API Discovery Resources
-OpenAI APILinks to an external site.
-GitHub: Public APIsLinks to an external site.
-Rapid APILinks to an external site.
-API ListLinks to an external site.
-Be sure to read the API documentation thoroughly, especially endpoints, rate limits, and key requirements. It’s recommended you test the API in Postman before building, as you may find you need to pivot to a different API.
+The backend server will run on `http://localhost:5000`
 
-Communication and Presentation Tools
-Communication and Presentation Tools: CanvaLinks to an external site., Google SlidesLinks to an external site., PowerpointLinks to an external site. 
-Media Recording Tools: Zoom,  Google Meet Recording,  Canvas media recording, YouTubeLinks to an external site. or Loom
+### Frontend Setup
 
-For more specific instructions: Project 2 Assignment: Productivity Full-Stack Application Pitch
-Before you begin development on your full-stack productivity app, you’ll need to plan and communicate your vision clearly, just like you would on a real software team. This pitch simulates the planning phase of a professional product lifecycle, helping you strengthen your ability to define project goals, structure your workflow, and deliver a scoped, achievable product.
+1. Navigate to the frontend directory:
+```bash
+cd frontend
+```
 
-This assignment helps you develop key software engineering skills including:
+2. Install Node.js dependencies:
+```bash
+npm install
+```
 
-Scoping and requirement gathering
-Communicating technical and business goals
-Designing problem-solving processes and workflows
-Planning iterative development across a multi-stage build
-A strong pitch ensures your idea is realistic, feasible, and aligned with the project rubric and business impact. Reminder on requirements for your project to keep in mind while developing your pitch:
+3. Start the React development server:
+```bash
+npm start
+```
 
-Be built entirely from scratch by you.
-Solve a user productivity issue, such as generating reports,viewing data, managing projects and assigned tasks, etc.
-Include at least 2 relational resources in the backend (e.g., users, projects, dashboards, requests, responses, logs, tasks, notes).
-Allow for basic CRUD on at least one custom resource.
-Store generated responses in a SQL database using SQLAlchemy.
-Include error handling for failed requests.
-Instructions
-You will submit a short project pitch that includes the following three components:
+The frontend application will run on `http://localhost:3000`
 
-Step 1: Business Problem Scenario
-Write a clear explanation of:
+## Usage
 
-The user problem your app solves in the domain of productivity (e.g., time management, task tracking, organization).
-Who your target users are and what daily frustrations they face.
-Why your solution adds value (e.g., streamlines workflows, reduces friction, saves time).
-If applicable, mention how an external API or AI service will extend the app’s usefulness.
-Define your project’s primary goal(s) and a few examples of user stories your app should support.
-Example Prompts
-What productivity pain point are you solving?
-How will users interact with your app?
-What will make your app unique or helpful?
+### Getting Started
 
-Step 2: Problem Solving Process
-Define your project plan and technical strategy. Your answer should include:
+1. **Register an Account**: Create a new user account with your email and password
+2. **Login**: Access your personal dashboard with your credentials
+3. **Create Categories**: Set up expense categories (Food, Transportation, etc.)
+4. **Add Expenses**: Record your daily expenses with amounts, descriptions, and categories
+5. **View Dashboard**: Monitor your spending patterns and recent activity
 
-A step-by-step process (3–7 steps) for how you’ll build your app.
-Pro-Tip: Use the Software Development Lifecycle Tasks.
-A conceptual outline, such as:
-A high-level flowchart, pseudocode, or list of app features
-Your planned data models and how they relate
-Planned React component breakdown
-The tools and technologies you'll use (e.g., Flask, SQLAlchemy, React Router, useState/useEffect).
-Mention where your process aligns with the project rubric: full CRUD, 2+ related resources, clean UI, documentation, optional API integration, etc.
+### API Endpoints
 
-Step 3: Timeline and Scope
-Create a realistic timeline for completing your app. Break the project into phases and estimate your time for each:
+#### Authentication
+- `POST /api/register` - Create new user account
+- `POST /api/login` - Authenticate user and receive JWT token
+- `GET /api/profile` - Get current user profile (requires authentication)
 
-Planning and research
-Backend setup and modeling
-Frontend structure and styling
-Debugging and testing
-README, presentation, reflection
-Timeline and Scope Considerations
-Time-box your work across the total project timeframe
-Identify when you may need to research APIs, tools, or libraries
-Include time for debugging and iteration (e.g., after peer critique)
-Call out any open questions or risks (e.g., “Need to learn Flask pagination”, “API integration may require key handling”)
+#### Categories
+- `GET /api/categories` - Get all user categories
+- `POST /api/categories` - Create new category
+- `POST /api/categories/create-defaults` - Create default expense categories
 
-Submission and Grading Criteria
-Review the rubric below to guide you in your submission and for details on the required criteria.
-When you are ready, upload your pitch as a document (such as a Google Doc). Include any assets embedded in the document to submit it below. Make sure your final document is:
-Clearly organized under the three required sections
-1–2 pages in length
-Optionally include diagrams, flowcharts, or wireframes as images or links
+#### Expenses
+- `GET /api/expenses` - Get all user expenses
+- `POST /api/expenses` - Create new expense
+- `PUT /api/expenses/:id` - Update existing expense
+- `DELETE /api/expenses/:id` - Delete expense
+
+#### Dashboard
+- `GET /api/dashboard` - Get dashboard summary data
+
+## Database Schema
+
+### Users Table
+- `id` - Primary key
+- `email` - Unique user email
+- `password_hash` - Encrypted password
+- `first_name` - User's first name
+- `last_name` - User's last name
+- `default_currency` - Preferred currency (default: USD)
+- `created_at` - Account creation timestamp
+
+### Categories Table
+- `id` - Primary key
+- `name` - Category name
+- `color` - Display color (hex code)
+- `user_id` - Foreign key to users table
+- `created_at` - Creation timestamp
+
+### Expenses Table
+- `id` - Primary key
+- `amount` - Expense amount
+- `description` - Expense description
+- `date` - Expense date
+- `currency` - Currency code
+- `user_id` - Foreign key to users table
+- `category_id` - Foreign key to categories table
+- `created_at` - Creation timestamp
+
+## Configuration
+
+### Environment Variables
+
+Create a `.env` file in the backend directory with the following variables:
+
+```
+SECRET_KEY=your-secret-key-here
+JWT_SECRET_KEY=your-jwt-secret-key
+DATABASE_URL=sqlite:///finance_tracker.db
+```
+
+### Default Categories
+
+The application automatically creates these default categories for new users:
+- Food & Dining
+- Transportation
+- Entertainment
+- Shopping
+- Bills & Utilities
+- Healthcare
+- Other
+
+## Security Features
+
+- Password hashing using Werkzeug security
+- JWT token-based authentication
+- CORS protection for API endpoints
+- Input validation and sanitization
+- User-specific data isolation
+
+## Development
+
+### Running Tests
+
+Currently, the application does not include automated tests. This would be a good area for future development.
+
+### Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Test thoroughly
+5. Submit a pull request
+
+## Troubleshooting
+
+### Common Issues
+
+**Backend won't start**
+- Ensure Python virtual environment is activated
+- Verify all dependencies are installed with `pip install -r requirements.txt`
+- Check that port 5000 is not already in use
+
+**Frontend won't connect to backend**
+- Verify backend is running on `http://localhost:5000`
+- Check that CORS is properly configured
+- Ensure no firewall is blocking the connection
+
+**Login issues**
+- Clear browser local storage and cookies
+- Verify email and password are correct
+- Check backend logs for authentication errors
+
+**Database errors**
+- Delete `finance_tracker.db` to reset the database
+- Restart the backend server to recreate tables
+- Ensure SQLite is properly installed
+
+## License
+
+This project is open source and available under the MIT License.
+
+## Support
+
+For questions or issues, please check the troubleshooting section above or review the application logs for specific error messages.
