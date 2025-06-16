@@ -468,6 +468,184 @@ def categorize_expense():
 def test_ai():
     return jsonify({'message': 'AI endpoint working'}), 200
 
+@app.route('/api/chat', methods=['POST'])
+@jwt_required()
+def chat_with_ai():
+    try:
+        data = request.get_json()
+        user_message = data.get('message', '').strip()
+        user_id = int(get_jwt_identity())
+        
+        print(f"Chat request from user {user_id}: {user_message}")
+        
+        if not user_message:
+            return jsonify({'error': 'Message is required'}), 400
+        
+        # Get user's financial data
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        # Get user's expenses and categories
+        expenses = Expense.query.filter_by(user_id=user_id).order_by(Expense.date.desc()).all()
+        categories = Category.query.filter_by(user_id=user_id).all()
+        
+        # Calculate financial insights
+        current_month = datetime.now().month
+        current_year = datetime.now().year
+        
+        # This month's expenses
+        monthly_expenses = [exp for exp in expenses if exp.date.month == current_month and exp.date.year == current_year]
+        total_this_month = sum(exp.amount for exp in monthly_expenses)
+        
+        # Category breakdown this month
+        category_totals = {}
+        for expense in monthly_expenses:
+            if expense.category:
+                cat_name = expense.category.name
+                category_totals[cat_name] = category_totals.get(cat_name, 0) + expense.amount
+        
+        # Recent expenses (last 10)
+        recent_expenses = expenses[:10]
+        
+        # Top spending categories (overall)
+        all_category_totals = {}
+        for expense in expenses:
+            if expense.category:
+                cat_name = expense.category.name
+                all_category_totals[cat_name] = all_category_totals.get(cat_name, 0) + expense.amount
+        
+        # Total expenses overall
+        total_expenses = sum(exp.amount for exp in expenses)
+        
+        # Prepare context for AI
+        financial_context = {
+            'total_expenses_all_time': total_expenses,
+            'total_this_month': total_this_month,
+            'monthly_expense_count': len(monthly_expenses),
+            'category_breakdown_this_month': category_totals,
+            'top_categories_overall': dict(sorted(all_category_totals.items(), key=lambda x: x[1], reverse=True)[:5]),
+            'recent_expenses': [
+                {
+                    'amount': exp.amount,
+                    'description': exp.description,
+                    'category': exp.category.name if exp.category else 'Uncategorized',
+                    'date': exp.date.strftime('%Y-%m-%d')
+                } for exp in recent_expenses[:5]
+            ],
+            'available_categories': [cat.name for cat in categories],
+            'user_name': user.first_name
+        }
+        
+        # Generate AI response
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+            prompt = f"""
+You are a helpful personal finance assistant for {financial_context['user_name']}. Answer their question using their actual financial data.
+
+USER QUESTION: "{user_message}"
+
+FINANCIAL DATA:
+- Total expenses (all time): ${financial_context['total_expenses_all_time']:.2f}
+- Total spent this month: ${financial_context['total_this_month']:.2f}
+- Number of transactions this month: {financial_context['monthly_expense_count']}
+
+THIS MONTH'S SPENDING BY CATEGORY:
+{chr(10).join([f"- {cat}: ${amount:.2f}" for cat, amount in financial_context['category_breakdown_this_month'].items()])}
+
+TOP SPENDING CATEGORIES (OVERALL):
+{chr(10).join([f"- {cat}: ${amount:.2f}" for cat, amount in financial_context['top_categories_overall'].items()])}
+
+RECENT TRANSACTIONS:
+{chr(10).join([f"- ${exp['amount']:.2f} - {exp['description']} ({exp['category']}) on {exp['date']}" for exp in financial_context['recent_expenses']])}
+
+AVAILABLE CATEGORIES: {', '.join(financial_context['available_categories'])}
+
+Instructions:
+1. Use the actual financial data provided above to answer their question
+2. Be conversational and helpful, like a friendly financial advisor
+3. Provide specific numbers and insights from their data
+4. If they ask about spending patterns, give actionable advice
+5. If the question isn't about finances, politely redirect to financial topics
+6. Keep responses concise but informative (2-4 sentences max)
+7. Use a warm, encouraging tone
+
+Response:"""
+            
+            print("Sending chat request to Gemini...")
+            response = model.generate_content(prompt)
+            ai_response = response.text.strip()
+            
+            print(f"AI response: {ai_response}")
+            
+            return jsonify({
+                'response': ai_response,
+                'context_used': {
+                    'total_this_month': financial_context['total_this_month'],
+                    'expense_count': financial_context['monthly_expense_count'],
+                    'top_category_this_month': max(financial_context['category_breakdown_this_month'], key=financial_context['category_breakdown_this_month'].get) if financial_context['category_breakdown_this_month'] else None
+                }
+            }), 200
+            
+        except Exception as ai_error:
+            print(f"AI chat error: {ai_error}")
+            import traceback
+            traceback.print_exc()
+            
+            # Fallback response using actual data
+            if 'spend' in user_message.lower() and 'month' in user_message.lower():
+                fallback_response = f"You've spent ${financial_context['total_this_month']:.2f} this month across {financial_context['monthly_expense_count']} transactions."
+            elif 'category' in user_message.lower() or 'categories' in user_message.lower():
+                if financial_context['category_breakdown_this_month']:
+                    top_cat = max(financial_context['category_breakdown_this_month'], key=financial_context['category_breakdown_this_month'].get)
+                    fallback_response = f"Your top spending category this month is {top_cat} with ${financial_context['category_breakdown_this_month'][top_cat]:.2f}."
+                else:
+                    fallback_response = "You haven't recorded any expenses this month yet."
+            elif 'recent' in user_message.lower() or 'latest' in user_message.lower():
+                if financial_context['recent_expenses']:
+                    latest = financial_context['recent_expenses'][0]
+                    fallback_response = f"Your most recent expense was ${latest['amount']:.2f} for {latest['description']} in the {latest['category']} category."
+                else:
+                    fallback_response = "You haven't recorded any expenses yet."
+            else:
+                fallback_response = f"I can help you analyze your spending! You've spent ${financial_context['total_this_month']:.2f} this month. Try asking about your categories, recent transactions, or spending patterns."
+            
+            return jsonify({
+                'response': fallback_response,
+                'ai_available': False
+            }), 200
+        
+    except Exception as e:
+        print(f"Chat endpoint error: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': 'Failed to process chat message'}), 500
+
+# Test endpoint for chat functionality
+@app.route('/api/chat/test', methods=['GET'])
+@jwt_required()
+def test_chat():
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        expense_count = Expense.query.filter_by(user_id=user_id).count()
+        category_count = Category.query.filter_by(user_id=user_id).count()
+        
+        return jsonify({
+            'message': 'Chat system ready!',
+            'user': user.first_name,
+            'expenses_count': expense_count,
+            'categories_count': category_count
+        }), 200
+        
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 # ============== HEALTH CHECK ==============
 
 @app.route('/api/health', methods=['GET'])
