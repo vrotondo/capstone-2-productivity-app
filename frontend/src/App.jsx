@@ -3,6 +3,7 @@ import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './context/AuthContext';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import Header from './components/common/Header';
+import FinancialAssistant from './components/FinancialAssistant';
 
 // Pages
 import Login from './pages/Login';
