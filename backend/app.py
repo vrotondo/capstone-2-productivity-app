@@ -622,6 +622,10 @@ Response:"""
         traceback.print_exc()
         return jsonify({'error': 'Failed to process chat message'}), 500
 
+@app.route('/api/chat/debug', methods=['GET'])
+def debug_chat():
+    return jsonify({'message': 'Chat endpoint exists and is reachable'}), 200
+
 # Test endpoint for chat functionality
 @app.route('/api/chat/test', methods=['GET'])
 @jwt_required()
