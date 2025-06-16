@@ -46,25 +46,45 @@ const FinancialAssistant = () => {
         setIsTyping(true);
 
         try {
-            // TODO: Replace with actual API call
-            const response = await simulateAIResponse(inputText);
+            // Get auth token
+            const token = localStorage.getItem('token');
 
-            setTimeout(() => {
-                const botMessage = {
-                    id: Date.now() + 1,
-                    text: response,
-                    sender: 'bot',
-                    timestamp: new Date()
-                };
-                setMessages(prev => [...prev, botMessage]);
-                setIsTyping(false);
-            }, 1000);
+            if (!token) {
+                throw new Error('No authentication token found');
+            }
+
+            const response = await fetch('http://localhost:5000/api/chat', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    message: inputText
+                })
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            const data = await response.json();
+
+            const botMessage = {
+                id: Date.now() + 1,
+                text: data.response,
+                sender: 'bot',
+                timestamp: new Date()
+            };
+
+            setMessages(prev => [...prev, botMessage]);
+            setIsTyping(false);
 
         } catch (error) {
             console.error('Chat error:', error);
             const errorMessage = {
                 id: Date.now() + 1,
-                text: "Sorry, I'm having trouble processing your request right now. Please try again.",
+                text: "Sorry, I'm having trouble connecting to the financial data right now. Please try again in a moment.",
                 sender: 'bot',
                 timestamp: new Date()
             };
@@ -73,46 +93,11 @@ const FinancialAssistant = () => {
         }
     };
 
-    // Temporary simulation function - we'll replace this with real AI
-    const simulateAIResponse = async (userInput) => {
-        // Simple keyword-based responses for now
-        const input = userInput.toLowerCase();
-
-        if (input.includes('spend') && input.includes('month')) {
-            return "Based on your recent expenses, you've spent $1,247 this month. Your biggest categories are Food & Dining ($423) and Transportation ($298).";
-        }
-        if (input.includes('food') || input.includes('dining')) {
-            return "You've spent $423 on Food & Dining this month across 18 transactions. That's about $14 per day on average.";
-        }
-        if (input.includes('category') || input.includes('categories')) {
-            return "Your top spending categories this month are:\n1. Food & Dining: $423\n2. Transportation: $298\n3. Entertainment: $186\n4. Shopping: $142";
-        }
-        if (input.includes('latest') || input.includes('recent')) {
-            return "Your most recent expenses:\n• $12.50 - Coffee shop (Food & Dining)\n• $45.00 - Gas station (Transportation)\n• $28.99 - Netflix (Entertainment)";
-        }
-        if (input.includes('hello') || input.includes('hi')) {
-            return "Hello! I can help you understand your spending patterns. Try asking me about your monthly expenses, top categories, or recent transactions.";
-        }
-
-        return "I understand you're asking about your finances. I can help with spending summaries, category breakdowns, recent transactions, and insights. What would you like to know specifically?";
-    };
-
-    const handleKeyPress = (e) => {
-        if (e.key === 'Enter' && !e.shiftKey) {
-            e.preventDefault();
-            handleSendMessage();
-        }
-    };
-
-    const formatTime = (timestamp) => {
-        return timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
-
     const suggestedQuestions = [
         "How much did I spend this month?",
         "What's my biggest expense category?",
         "Show me my recent transactions",
-        "Any spending insights for me?"
+        "What are my spending patterns?"
     ];
 
     return (
@@ -120,7 +105,12 @@ const FinancialAssistant = () => {
             {/* Chat Toggle Button */}
             <button
                 onClick={() => setIsOpen(true)}
-                className={`fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all duration-300 flex items-center justify-center z-40 ${isOpen ? 'hidden' : 'block'}`}
+                className={`fixed bottom-6 right-6 w-14 h-14 bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg transition-all duration-300 flex items-center justify-center z-50 ${isOpen ? 'hidden' : 'block'}`}
+                style={{
+                    border: 'none',
+                    outline: 'none',
+                    boxSizing: 'border-box'
+                }}
             >
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />

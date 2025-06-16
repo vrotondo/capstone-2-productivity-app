@@ -75,6 +75,9 @@ function App() {
               },
             }}
           />
+
+          {/* Add the Financial Assistant chatbot */}
+          <FinancialAssistant />
         </div>
       </Router>
     </AuthProvider>
