@@ -27,7 +27,7 @@ genai.configure(api_key=os.getenv('GEMINI_API_KEY'))
 # Initialize extensions
 db.init_app(app)
 jwt = JWTManager(app)
-CORS(app, origins=["http://localhost:3000", "http://localhost:5173"])
+CORS(app, origins=["http://localhost:3000", "http://localhost:5173", "https://finance-tracker-psql.onrender.com"])
 
 # JWT Error handlers
 @jwt.invalid_token_loader
